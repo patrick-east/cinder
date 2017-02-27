@@ -184,7 +184,12 @@ class LioAdm(iscsi.ISCSITarget):
         # We make changes persistent
         self._persist_configuration(volume['id'])
 
-        return super(LioAdm, self).initialize_connection(volume, connector)
+        info = super(LioAdm, self).initialize_connection(volume, connector)
+
+        # We know that these connections are unique for each attachment
+        info['data']['shared'] = False
+
+        return info
 
     def terminate_connection(self, volume, connector, **kwargs):
         volume_iqn = volume['provider_location'].split(' ')[1]

@@ -1434,6 +1434,11 @@ class VolumeManager(manager.CleanableManager,
             if discard_supported:
                 conn_info['data']['discard'] = True
 
+        # If not specified add in a shared flag as a default, assumed the worst
+        # which is that the attachment might be shared.
+        if conn_info['data'].get('shared') is None:
+            conn_info['data']['shared'] = True
+
         return conn_info
 
     def initialize_connection(self, context, volume, connector):
@@ -4607,8 +4612,6 @@ class VolumeManager(manager.CleanableManager,
         self._notify_about_volume_usage(context, vref, "attach.end")
         LOG.info(_LI("Attach volume completed successfully."),
                  resource=vref)
-        attachment_ref = objects.VolumeAttachment.get_by_id(context,
-                                                            attachment_id)
         return connection_info
 
     def _connection_terminate(self, context, volume,
@@ -4654,24 +4657,18 @@ class VolumeManager(manager.CleanableManager,
         NOTE if the attachment reference is None, we remove all existing
         attachments for the specified volume object.
         """
-        has_shared_connection = False
         attachment_ref = objects.VolumeAttachment.get_by_id(context,
                                                             attachment_id)
         if not attachment_ref:
             for attachment in VA_LIST.get_all_by_volume_id(context, vref.id):
-                if self._do_attachment_delete(context, vref, attachment):
-                    has_shared_connection = True
+                self._do_attachment_delete(context, vref, attachment)
         else:
-            has_shared_connection = (
-                self._do_attachment_delete(context, vref, attachment_ref))
-        return has_shared_connection
+            self._do_attachment_delete(context, vref, attachment_ref)
 
     def _do_attachment_delete(self, context, vref, attachment):
         utils.require_driver_initialized(self.driver)
         self._notify_about_volume_usage(context, vref, "detach.start")
-        has_shared_connection = self._connection_terminate(context,
-                                                           vref,
-                                                           attachment)
+        self._connection_terminate(context, vref, attachment)
         self.driver.detach_volume(context, vref, attachment)
         try:
             LOG.debug('Deleting attachment %(attachment_id)s.',
@@ -4695,4 +4692,3 @@ class VolumeManager(manager.CleanableManager,
                                                  vref.id,
                                                  'attached_mode')
         self._notify_about_volume_usage(context, vref, "detach.end")
-        return has_shared_connection

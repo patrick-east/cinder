@@ -1747,6 +1747,7 @@ class PureISCSIDriver(PureBaseVolumeDriver, san.SanISCSIDriver):
             "data": {
                 "target_discovered": False,
                 "discard": True,
+                "shared": True,
             },
         }
 
@@ -1930,6 +1931,7 @@ class PureFCDriver(PureBaseVolumeDriver, driver.FibreChannelDriver):
                 "target_wwn": target_wwns,
                 'initiator_target_map': init_targ_map,
                 "discard": True,
+                "shared": True,
             }
         }
 
